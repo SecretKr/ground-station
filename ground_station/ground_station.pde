@@ -5,6 +5,8 @@ import processing.serial.*;
 
 /* SETTINGS BEGIN */
 
+float hTime = 20;
+
 // Serial port to connect to
 String serial_port = null;
 
@@ -14,7 +16,11 @@ DropdownList serialPortsList;
 final int BAUD_RATE = 115200;
 
 // graphs
-Graph gyroGraph = new Graph(65,45,200,100,color(200,200,200));
+Graph gyroGraph = new Graph(65,45,230,150,color(200,200,200));
+Graph accGraph = new Graph(385,45,230,150,color(200));
+Graph vvGraph = new Graph(705,45,230,150,color(200));
+Graph altGraph = new Graph(65,525,230,150,color(200));
+
 float[][] gyroGraphValues = new float[3][20];
 float[] data = new float[40];
 float[] gyroTime = new float[20];
@@ -22,16 +28,17 @@ float[] gyroTime = new float[20];
 
 void setup() {
   surface.setTitle("GroundSatation");
-  size(1280, 720);
-
+  size(1440, 810);
+  pixelDensity(2); // enable for macos
+  fullScreen();
   // gui
   String[] portNames = Serial.list();
   cp5 = new ControlP5(this);
   background(20);
   
   // serial port
-  cp5.setFont(createFont("Arial",20));
-  serialPortsList = cp5.addDropdownList("serial ports").setPosition(640, 20).setWidth(200);
+  cp5.setFont(createFont("Arial",10));
+  serialPortsList = cp5.addDropdownList("serial ports").setPosition(500, 300).setWidth(400);
   serialPortsList.setBackgroundColor(color(20)).setColorBackground(color(40)).setItemHeight(30).setBarHeight(30).setColorActive(color(255));
   serialPortsList.getCaptionLabel().getStyle().setPadding(6,6,6,6);
   //serialPortsList.ListBoxItem().getStyle();
@@ -56,11 +63,45 @@ void setup() {
   gyroGraph.xDiv=5;
   gyroGraph.yDiv=6;
   gyroGraph.xMax=0;
-  gyroGraph.xMin=-20;
+  gyroGraph.xMin=-hTime;
   gyroGraph.yMax=6;
   gyroGraph.yMin=-6;
   
+  accGraph.xLabel="Time (sec)";
+  accGraph.yLabel="g-force";
+  accGraph.Title="Accelerometers";
+  accGraph.xDiv=5;
+  accGraph.yDiv=6;
+  accGraph.xMax=0;
+  accGraph.xMin=-hTime;
+  accGraph.yMax=1.2;
+  accGraph.yMin=-1.2;
+  
+  vvGraph.xLabel="Time (sec)";
+  vvGraph.yLabel="m/s";
+  vvGraph.Title="Vertical Velocity";
+  vvGraph.xDiv=5;
+  vvGraph.yDiv=6;
+  vvGraph.xMax=0;
+  vvGraph.xMin=-hTime;
+  vvGraph.yMax=0.2;
+  vvGraph.yMin=-0.2;
+  
+  altGraph.xLabel="Time (sec)";
+  altGraph.yLabel="meters";
+  altGraph.Title="Altitude";
+  altGraph.xDiv=5;
+  altGraph.yDiv=6;
+  altGraph.xMax=0;
+  altGraph.xMin=-hTime;
+  altGraph.yMax=1.2;
+  altGraph.yMin=-1.2;
+  
   gyroGraph.DrawAxis();
+  accGraph.DrawAxis();
+  vvGraph.DrawAxis();
+  altGraph.DrawAxis();
+  drawRt(965,245,310,470);
   
   for (int i = 0;i < 35;i++) data[i] = 0;
   for (int i = 0;i < 20;i++) gyroTime[i] = -1;
@@ -109,6 +150,18 @@ void draw() {
       gyroGraph.smoothLine(gyroTime, gyroGraphValues[0]);
     }
   }
+}
+
+void drawRt(int x, int y, int w, int h){
+  fill(color(45)); color(255);stroke(color(255));strokeWeight(2);
+  
+  rect(x,y,w,h,10);
+  textAlign(CENTER);textSize(18);
+  fill(255); color(255);stroke(color(255));strokeWeight(1);
+  
+  fill(255);
+  text("Raw Telemetry" ,x+w/2,y+20);                            // Heading Title
+  textAlign(CENTER);
 }
 
 public void UP(int theValue){
