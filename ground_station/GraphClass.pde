@@ -16,7 +16,7 @@
     class Graph 
     {
       
-      boolean Dot=true;            // Draw dots at each data point if true
+      boolean Dot=false;            // Draw dots at each data point if true
       boolean RightAxis;            // Draw the next graph using the right axis if true
       boolean ErrorFlag=false;      // If the time array isn't in ascending order, make true  
       boolean ShowMouseLines=true;  // Draw lines and give values of the mouse position
@@ -58,7 +58,7 @@
         Main axes Lines, Graph Labels, Graph Background
        ==========================================================================================  */
         BackgroundColor = color(45);
-        fill(BackgroundColor); color(255);stroke(StrokeColor);strokeWeight(2);
+        fill(BackgroundColor); color(255);stroke(StrokeColor);strokeWeight(1.5);
         int t=40;
         
         //rect(xPos,yPos,Width+t*2.5,Height+t*2);            // outline
@@ -166,7 +166,7 @@
              smoothLine
           ==========================================================================================  */
     
-      void smoothLine(float[] x ,float[] y) {
+      void smoothLine(float[] x ,float[] y, int GraphColor) {
          
         float tempyMax=yMax, tempyMin=yMin;
         
@@ -177,7 +177,7 @@
          
 //         if(!ErrorFlag |true ){    // sort out later!
           
-          beginShape(); strokeWeight(2);stroke(GraphColor);noFill();smooth();
+          beginShape(); strokeWeight(1);stroke(GraphColor);noFill();smooth();
          
             for (int i=0; i<x.length; i++){
               
@@ -224,17 +224,17 @@
              Highlights points closest to Mouse X position   
             =================================================================================*/ 
                           
-              if( abs(mouseX-(xPos+(x[i]-x[0])/(x[x.length-1]-x[0])*Width))<5 ){
+              //if( abs(mouseX-(xPos+(x[i]-x[0])/(x[x.length-1]-x[0])*Width))<5 ){
                 
                  
-                  float yLinePosition = yPos+Height-(y[i]/(yMax-yMin)*Height)+(yMin)/(yMax-yMin)*Height;
-                  float xLinePosition = xPos+(x[i]-x[0])/(x[x.length-1]-x[0])*Width;
-                  strokeWeight(1);stroke(240);
-                 // line(xPos,yLinePosition,xPos+Width,yLinePosition);
-                  strokeWeight(2);stroke(GraphColor);
+              //    float yLinePosition = yPos+Height-(y[i]/(yMax-yMin)*Height)+(yMin)/(yMax-yMin)*Height;
+              //    float xLinePosition = xPos+(x[i]-x[0])/(x[x.length-1]-x[0])*Width;
+              //    strokeWeight(1);stroke(240);
+              //   // line(xPos,yLinePosition,xPos+Width,yLinePosition);
+              //    strokeWeight(2);stroke(GraphColor);
                   
-                  ellipse(xLinePosition,yLinePosition,4,4);
-              }
+              //    ellipse(xLinePosition,yLinePosition,4,4);
+              //}
               
      
               
@@ -288,13 +288,13 @@
       }
 
        
-          void smoothLine(float[] x ,float[] y, float[] z, float[] a ) {
-           GraphColor=color(188,53,53);
-            smoothLine(x ,y);
-           GraphColor=color(193-100,216-100,16);
-           smoothLine(z ,a);
+       //   void smoothLine(float[] x ,float[] y, float[] z, float[] a ) {
+       //    GraphColor=color(188,53,53);
+       //    smoothLine(x ,y);
+       //    GraphColor=color(193-100,216-100,16);
+       //    smoothLine(z ,a);
    
-       }
+       //}
        
        
        
