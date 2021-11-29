@@ -14,14 +14,14 @@ DropdownList serialPortsList;
 final int BAUD_RATE = 115200;
 
 // graphs
-Graph gyroGraph = new Graph(200,100,400,200,color(200,200,200));
+Graph gyroGraph = new Graph(65,45,200,100,color(200,200,200));
 float[][] gyroGraphValues = new float[3][20];
 float[] data = new float[40];
 float[] gyroTime = new float[20];
 //float[] lineGraphSampleNumbers = new float[20];
 
 void setup() {
-  surface.setTitle("Realtime plotter");
+  surface.setTitle("GroundSatation");
   size(1280, 720);
 
   // gui
@@ -50,13 +50,17 @@ void setup() {
       gyroGraphValues[i][k] = 0;
     }
   }
-  gyroGraph.xLabel="Time ";
-  gyroGraph.yLabel="deg ";
-  gyroGraph.Title="Gyro";
+  gyroGraph.xLabel="Time (sec)";
+  gyroGraph.yLabel="deg/s";
+  gyroGraph.Title="Gyroscopes";
   gyroGraph.xDiv=5;
+  gyroGraph.yDiv=6;
   gyroGraph.xMax=0;
   gyroGraph.xMin=-20;
-  gyroGraph.yMin = -1;
+  gyroGraph.yMax=6;
+  gyroGraph.yMin=-6;
+  
+  gyroGraph.DrawAxis();
   
   for (int i = 0;i < 35;i++) data[i] = 0;
   for (int i = 0;i < 20;i++) gyroTime[i] = -1;
@@ -72,15 +76,17 @@ void draw() {
       }
       catch (Exception e) {}
       //print(myString);
-      
+      boolean writeGraph = false;
       String[] pack = split(myString, ' ');
       for(int i = 0;i < pack.length;i++){
         try {data[int(split(pack[i], ':')[0])] = float(split(pack[i], ':')[2]);}
         catch (Exception e) {}
+        try { if( int(split(pack[i], ':')[0]) == 35) writeGraph = true; }
+        catch (Exception e) {}
       }
       
       // gyro graph
-      if(int(data[18]+data[17]*60+data[16]*3600) != gyroTime[gyroGraphValues[0].length-1] && gyroGraphValues[0][gyroGraphValues[0].length-1] != data[22]){
+      if(writeGraph){
         float max = -100;
         for(int k = 0;k < gyroGraphValues[0].length - 1;k++){
           gyroGraphValues[0][k] = gyroGraphValues[0][k+1];
@@ -99,7 +105,8 @@ void draw() {
       // draw graph
       background(20);
       gyroGraph.DrawAxis();
-      gyroGraph.LineGraph(gyroTime, gyroGraphValues[0]);
+      //gyroGraph.LineGraph(gyroTime, gyroGraphValues[0]);
+      gyroGraph.smoothLine(gyroTime, gyroGraphValues[0]);
     }
   }
 }

@@ -27,8 +27,8 @@
     
 
       color   GraphColor;
-      color   BackgroundColor=color(255);  
-      color   StrokeColor=color(180);     
+      color   BackgroundColor=color(20);  
+      color   StrokeColor=color(255);     
       
       String  Title="Title";          // Default titles
       String  xLabel="x - Label";
@@ -57,52 +57,34 @@
    /*  =========================================================================================
         Main axes Lines, Graph Labels, Graph Background
        ==========================================================================================  */
-    
-        fill(BackgroundColor); color(0);stroke(StrokeColor);strokeWeight(1);
-        int t=60;
+        BackgroundColor = color(45);
+        fill(BackgroundColor); color(255);stroke(StrokeColor);strokeWeight(2);
+        int t=40;
         
         //rect(xPos,yPos,Width+t*2.5,Height+t*2);            // outline
-        rect(xPos-t*1.6,yPos-t,Width+t*2.5,Height+t*2);
+        rect(xPos-t*1.5,yPos-t,Width+t*2,Height+t*2,10);
         textAlign(CENTER);textSize(18);
         float c=textWidth(Title);
-        fill(BackgroundColor); color(0);stroke(0);strokeWeight(1);
-        rect(xPos+Width/2-c/2,yPos-35,c,0);                         // Heading Rectangle  
+        fill(255); color(255);stroke(StrokeColor);strokeWeight(1);
+        //rect(xPos+Width/2-c/2,yPos-35,c,0);                         // Heading Rectangle  
         
-        fill(0);
-        text(Title,xPos+Width/2,yPos-37);                            // Heading Title
+        
+        fill(255);
+        text(Title,xPos+Width/2,yPos-15);                            // Heading Title
         textAlign(CENTER);textSize(14);
-        text(xLabel,xPos+Width/2,yPos+Height+t/1.5);                     // x-axis Label 
+        text(xLabel,xPos+Width/2,yPos+Height+t/1.2);                     // x-axis Label 
         
         rotate(-PI/2);                                               // rotate -90 degrees
-        text(yLabel,-yPos-Height/2,xPos-t*1.6+20);                   // y-axis Label  
+        text(yLabel,-yPos-Height/2,xPos-t*1.5+18);                   // y-axis Label  
         rotate(PI/2);                                                // rotate back
         
-        textSize(10); noFill(); stroke(0); smooth();strokeWeight(1);
+        textSize(10); noFill(); stroke(255); smooth();strokeWeight(1);
           //Edges
           line(xPos-3,yPos+Height,xPos-3,yPos);                        // y-axis line 
           line(xPos-3,yPos+Height,xPos+Width+5,yPos+Height);           // x-axis line 
           
-           stroke(200);
-          if(yMin<0){
-                    line(xPos-7,                                       // zero line 
-                         yPos+Height-(abs(yMin)/(yMax-yMin))*Height,   // 
-                         xPos+Width,
-                         yPos+Height-(abs(yMin)/(yMax-yMin))*Height
-                         );
           
-                    
-          }
-          
-          if(RightAxis){                                       // Right-axis line   
-              stroke(0);
-              line(xPos+Width+3,yPos+Height,xPos+Width+3,yPos);
-            }
-            
-           /*  =========================================================================================
-                Sub-devisions for both axes, left and right
-               ==========================================================================================  */
-            
-            stroke(0);
+           stroke(255);
             
            for(int x=0; x<=xDiv; x++){
        
@@ -129,89 +111,22 @@
             line(xPos-3,float(y)/yDiv*Height+yPos,                // ...
                   xPos-7,float(y)/yDiv*Height+yPos);              // y-axis lines 
             
-            textAlign(RIGHT);fill(20);
+            textAlign(RIGHT);fill(255);
             
             String yAxis=str(yMin+float(y)/yDiv*(yMax-yMin));     // Make y Label a string
             String[] yAxisMS=split(yAxis,'.');                    // Split string
            
             text(yAxisMS[0]+"."+yAxisMS[1].charAt(0),             // ... 
                  xPos-15,float(yDiv-y)/yDiv*Height+yPos+3);       // y-axis Labels 
-                        
-                        
-            /*  =========================================================================================
-                 right y-axis
-                ==========================================================================================  */
             
-            if(RightAxis){
-             
-              color(GraphColor); stroke(GraphColor);fill(20);
-            
-              line(xPos+Width+3,float(y)/yDiv*Height+yPos,             // ...
-                   xPos+Width+7,float(y)/yDiv*Height+yPos);            // Right Y axis sub devisions
-                   
-              textAlign(LEFT); 
-            
-              String yAxisRight=str(yMinRight+float(y)/                // ...
-                                yDiv*(yMaxRight-yMinRight));           // convert axis values into string
-              String[] yAxisRightMS=split(yAxisRight,'.');             // 
-           
-               text(yAxisRightMS[0]+"."+yAxisRightMS[1].charAt(0),     // Right Y axis text
-                    xPos+Width+15,float(yDiv-y)/yDiv*Height+yPos+3);   // it's x,y location
-            
-              noFill();
-            }stroke(0);
+            stroke(255);
             
           
           }
           
  
       }
-      
-      
-   /*  =========================================================================================
-       Bar graph
-       ==========================================================================================  */   
-      
-      void Bar(float[] a ,int from, int to) {
-        
-         
-          stroke(GraphColor);
-          fill(GraphColor);
-          
-          if(from<0){                                      // If the From or To value is out of bounds 
-           for (int x=0; x<a.length; x++){                 // of the array, adjust them 
-               rect(int(xPos+x*float(Width)/(a.length)),
-                    yPos+Height-2,
-                    Width/a.length-2,
-                    -a[x]/(yMax-yMin)*Height);
-                 }
-          }
-          
-          else {
-          for (int x=from; x<to; x++){
-            
-            rect(int(xPos+(x-from)*float(Width)/(to-from)),
-                     yPos+Height-2,
-                     Width/(to-from)-2,
-                     -a[x]/(yMax-yMin)*Height);
-                     
-    
-          }
-          }
-          
-      }
-  void Bar(float[] a ) {
-  
-              stroke(GraphColor);
-          fill(GraphColor);
-    
-  for (int x=0; x<a.length; x++){                 // of the array, adjust them 
-               rect(int(xPos+x*float(Width)/(a.length)),
-                    yPos+Height-2,
-                    Width/a.length-2,
-                    -a[x]/(yMax-yMin)*Height);
-                 }
-          }
+
   
   
    /*  =========================================================================================
