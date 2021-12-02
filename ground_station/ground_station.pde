@@ -23,7 +23,7 @@ float vvMin = -1;
 float tmpMax = 32;
 float tmpMin = 24;
 
-color[] graphColors = new color[3];
+color[] graphColors = new color[10];
 
 // Serial port to connect to
 String serial_port = null;
@@ -54,8 +54,9 @@ float[] sampleTime = new float[hTime];
 
 void setup() {
   graphColors[0] = color(214, 86, 103);
-  graphColors[1] = color(166, 118, 30);
+  graphColors[1] = color(255, 255, 102);
   graphColors[2] = color(56, 172, 255);
+  graphColors[3] = color(56, 172, 255);
   
   surface.setTitle("GroundSatation");
   size(1440, 810);
@@ -258,6 +259,9 @@ void draw() {
     oriGraph.smoothLine(sampleTime, oriGraphValues[0],graphColors[0]);
     oriGraph.smoothLine(sampleTime, oriGraphValues[1],graphColors[1]);
     oriGraph.smoothLine(sampleTime, oriGraphValues[2],graphColors[2]);
+    altGraph.smoothLine(sampleTime, altGraphValues,graphColors[1]);
+    vvGraph.smoothLine(sampleTime, vvGraphValues,graphColors[1]);
+    tmpGraph.smoothLine(sampleTime, tmpGraphValues,graphColors[1]);
   }
   
 }
@@ -403,15 +407,15 @@ void drawLt(int x, int y, int w, int h){
 }
 
 public void UP(int theValue){
-  if(serialPort != null) serialPort.write("up\r\n");
+  if(serialPort != null) serialPort.write("u");
 }
 
 public void DOWN(int theValue){
-  if(serialPort != null) serialPort.write("down\r\n");
+  if(serialPort != null) serialPort.write("d");
 }
 
 public void TEST(int theValue){
-  if(serialPort != null) serialPort.write("test\r\n");
+  if(serialPort != null) serialPort.write("t");
 }
 
 void controlEvent(ControlEvent theEvent) {
