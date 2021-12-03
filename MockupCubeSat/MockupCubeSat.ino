@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <SparkFunMPU9250-DMP.h>
 #include <Adafruit_BMP280.h>
 MPU9250_DMP imu;
@@ -14,7 +15,7 @@ float gxcal = -4.68;
 float gycal = -4.05;
 float gzcal = 1.56;
 
-float baseAlt;
+float baseBa;
 
 void setup() {
   Serial.begin(115200);
@@ -37,8 +38,9 @@ void setup() {
   imu.setLPF(20);
   imu.setSampleRate(40);
   imu.setCompassSampleRate(10);
-  baseAlt = bmp.readAltitude(1019.66);
+  baseBa = bmp.readPressure();
   pinMode(13,OUTPUT);
+  pinMode(2,INPUT_PULLUP);
 }
 
 String Sout;
@@ -57,7 +59,6 @@ void loop() {
   float magY = imu.calcMag(imu.my);
   float magZ = imu.calcMag(imu.mz);
   float vec = sqrt( pow(aX,2) + pow(aY,2) + pow(aZ,2) );
-  float alt = bmp.readAltitude(1019.66) - baseAlt;
   pitch = atan2 (aY ,( sqrt ((aX * aX) + (aZ * aZ))));
    roll = atan2(-aX ,( sqrt((aY * aY) + (aZ * aZ))));
 
@@ -84,35 +85,38 @@ void loop() {
     if(s == 'd') digitalWrite(13,0);
   }
 
-  Sout = "0:TMP:"+(String)(bmp.readTemperature())+" 1:HUM:"+(String)(random(50,100));
-  Serial.println(Sout);
-
-  Sout = "2:bPRS:"+(String)(baseAlt)+" 3:PRS:"+(String)(bmp.readPressure()/100)+" 4:ALT:"+(String)(bmp.readAltitude(1019.66)-baseAlt);
-  Serial.println(Sout);
-
-  Sout = "5:DIS:"+(String)(random(10))+" 6:LAT:"+(String)(random(10))+" 7:LON:"+(String)(random(10));
-  Serial.println(Sout);
-  Sout = "8:GALT:"+(String)(random(10))+" 9:NSAT:"+(String)(random(10))+" 10:HDOP:"+(String)(random(10));
-  Serial.println(Sout);
+  if(digitalRead(2)){
+    Serial.println("IMU init complete");
+    Serial.println("a:Fasdfh: : sd223 32:22b");
+    Sout = "0:TMP:"+(String)(bmp.readTemperature())+" 1:HUM:"+(String)(random(50,100));
+    Serial.println(Sout);
+    Sout = "2:bPRS:"+(String)(baseBa)+" 3:PRS:"+(String)(bmp.readPressure())+" 4:ALT:"+(String)(bmp.readAltitude(1019.66));
+    Serial.println(Sout);
+    Sout = "5:DIS:"+(String)(random(10))+" 6:LAT:"+"1493.00"+" 7:LON:"+"10043.01";
+    Serial.println(Sout);
+    Sout = "8:GALT:"+(String)(random(10))+" 9:NSAT:"+(String)(random(10))+" 10:HDOP:"+(String)(random(10));
+    Serial.println(Sout);
+    Sout = "11:fix:"+(String)(random(10))+" 12:fixq:"+(String)(random(10));
+    Serial.println(Sout);
+    Sout = "13:spd:"+(String)(20000)+" 14:bLat:"+"1402.89"+" 15:bLon:"+"10042.99";
+    Serial.println(Sout);
+    Sout = "16:hour:"+(String)(16)+" 17:min:"+(String)(45)+" 18:sec:"+(String)(i++);
+    Serial.println(Sout);
+    Sout = "";
+    Sout = "19:AX:"+(String)(aX)+" 20:AY:"+(String)(aY)+" 21:AZ:"+(String)(aZ)+" 31:ACC:"+(String)(vec);
+    Serial.println(Sout);
+    Sout = "22:GX:"+(String)(gX)+" 23:GY:"+(String)(gY)+" 24:GZ:"+(String)(gZ);
+    Serial.println(Sout);
+    Sout = "25:MX:"+(String)((float)random(-10,10)/10)+" 26:MY:"+(String)((float)random(-10,10)/10)+" 27:MZ:"+(String)((float)random(-10,10)/10);
+    Serial.println(Sout);
+    Sout = "28:PIT:"+(String)(pitch)+" 29:ROL:"+(String)(roll)+" 30:YAW:"+(String)(yaw);
+    Serial.println(Sout);
+    Sout = "32:c5S:"+(String)(random(10))+" 33:bat:"+(String)(random(10))+" 34:bH:"+(String)(random(10))+" 35:gH:"+(String)(random(10));
+    Serial.println(Sout);
+  }
+  else{
+    i = 1;
+  }
   
-  Sout = "11:fix:"+(String)(random(10))+" 12:fixq:"+(String)(random(10));
-  Serial.println(Sout);
-  Sout = "13:spd:"+(String)(0)+" 14:bLat:"+(String)(random(10))+" 15:bLon:"+(String)(random(10));
-  Serial.println(Sout);
-  Sout = "16:hour:"+(String)(16)+" 17:min:"+(String)(45)+" 18:sec:"+(String)(i++);
-  Serial.println(Sout);
-  Sout = "";
-  Sout = "19:AX:"+(String)(aX)+" 20:AY:"+(String)(aY)+" 21:AZ:"+(String)(aZ)+" 31:ACC:"+(String)(vec);
-  Serial.println(Sout);
-  Sout = "22:GX:"+(String)(gX)+" 23:GY:"+(String)(gY)+" 24:GZ:"+(String)(gZ);
-  Serial.println(Sout);
-  Sout = "25:MX:"+(String)((float)random(-10,10)/10)+" 26:MY:"+(String)((float)random(-10,10)/10)+" 27:MZ:"+(String)((float)random(-10,10)/10);
-  Serial.println(Sout);
-  Sout = "28:PIT:"+(String)(pitch)+" 29:ROL:"+(String)(roll)+" 30:YAW:"+(String)(yaw);
-  Serial.println(Sout);
-
-  Sout = "32:c5S:"+(String)(random(10))+" 33:bat:"+(String)(random(10))+" 34:bH:"+(String)(random(10))+" 35:gH:"+(String)(random(10));
-  Serial.println(Sout);
-  
-  delay(50-millis()%50);
+  delay(1000-millis()%1000);
 }

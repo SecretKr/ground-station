@@ -24,10 +24,10 @@ float tmpMax = 32;
 float tmpMin = 24;
 
 color[] graphColors = new color[10];
+color[] colors = new color[10];
 
 // Serial port to connect to
 String serial_port = null;
-
 Serial serialPort;
 ControlP5 cp5;
 DropdownList serialPortsList;
@@ -37,7 +37,7 @@ final int BAUD_RATE = 115200;
 Graph gyroGraph = new Graph(65,45,310,150,color(200,200,200)); // x+65 y+45 -80 -80
 Graph accGraph = new Graph(465,45,310,150,color(200));
 Graph oriGraph = new Graph(865,45,310,150,color(200));
-Graph locGraph = new Graph(1265,45,150,150,color(200));
+//Graph locGraph = new Graph(1265,45,150,150,color(200));
 Graph altGraph = new Graph(465,285,310,150,color(200));
 Graph vvGraph = new Graph(865,285,310,150,color(200));
 Graph tmpGraph = new Graph(65,525,310,150,color(200));
@@ -50,13 +50,25 @@ float[] vvGraphValues = new float[hTime];
 float[] tmpGraphValues = new float[hTime];
 float[] data = new float[40];
 float[] sampleTime = new float[hTime];
-//float[] gyroTime = new float[20];
+float lat=-1, lon=-1, blat=-1, blon=-1, plat=-1, plon=-1;
+String googleApi = "https://maps.googleapis.com/maps/api/staticmap?&key=AIzaSyAz2LPPQrrUaGmC_yvAT72u4CfQSBtesKg&size=230x230";
+PImage webImg;
+PrintWriter dataLog;
+
+boolean saveData = true;
+boolean loadMap = true;
 
 void setup() {
-  graphColors[0] = color(214, 86, 103);
-  graphColors[1] = color(255, 255, 102);
-  graphColors[2] = color(56, 172, 255);
+  webImg = loadImage("map.png");
+  
+  graphColors[0] = color(255, 72, 72);
+  graphColors[1] = color(255, 211, 105);
+  graphColors[2] = color(56, 142, 255);
   graphColors[3] = color(56, 172, 255);
+  
+  colors[0] = color(34, 40, 49);
+  colors[1] = color(57, 62, 70);
+  colors[2] = color(255, 211, 105);
   
   surface.setTitle("GroundSatation");
   size(1440, 810);
@@ -65,29 +77,56 @@ void setup() {
   // gui
   String[] portNames = Serial.list();
   cp5 = new ControlP5(this);
-  background(20);
-  
+  background(colors[0]);
+  ControlFont.RENDER_2X = true;
+  dataLog = createWriter("LOG.csv");
   // serial port
   if(isMac) cp5.setFont(createFont("Arial",10));
   else cp5.setFont(createFont("Arial",20));
-  serialPortsList = cp5.addDropdownList("serial ports").setPosition(805, 485).setWidth(390);
-  serialPortsList.setBackgroundColor(color(20)).setColorBackground(color(40)).setItemHeight(30).setBarHeight(30).setColorActive(color(255));
+  serialPortsList = cp5.addDropdownList("serial ports").setPosition(820, 500).setWidth(360);
+  serialPortsList.setBackgroundColor(color(20)).setColorBackground(colors[1]).setItemHeight(30).setBarHeight(30).setColorActive(color(255));
   serialPortsList.getCaptionLabel().getStyle().setPadding(6,6,6,6);
   for(int i = 0 ; i < portNames.length; i++) serialPortsList.addItem(portNames[i], i);
   
   // button
   cp5.addButton("UP")
      .setPosition(420,500)
-     .setSize(90,90)
-     .setColorBackground(color(40));
+     .setSize(100,90)
+     .setColorBackground(colors[1]);
   cp5.addButton("DOWN")
      .setPosition(420,610)
-     .setSize(90,90)
-     .setColorBackground(color(40));
-  cp5.addButton("TEST")
-     .setPosition(530,500)
-     .setSize(90,90)
-     .setColorBackground(color(40));
+     .setSize(100,90)
+     .setColorBackground(colors[1]);
+  cp5.addButton("C1")
+     .setPosition(540,500)
+     .setSize(100,90)
+     .setColorBackground(colors[1])
+     .setLabel("C1");
+  cp5.addButton("C2")
+     .setPosition(540,610)
+     .setSize(100,90)
+     .setColorBackground(colors[1])
+     .setLabel("C2");
+  textAlign(CENTER); textSize(28);
+  fill(255); color(255); stroke(color(255)); strokeWeight(1.5);
+  text("Save Data" ,725,530);
+  cp5.addToggle("save-data")
+     .setPosition(660,545)
+     .setSize(130,45)
+     .setState(false)
+     .setMode(ControlP5.SWITCH)
+     .setLabel("")
+     .setColorBackground(colors[1])
+     .setColorActive(colors[2]);
+  text("Load Map" ,725,640);
+  cp5.addToggle("load-map")
+     .setPosition(660,655)
+     .setSize(130,45)
+     .setState(false)
+     .setMode(ControlP5.SWITCH)
+     .setLabel("")
+     .setColorBackground(colors[1])
+     .setColorActive(colors[2]);
      
   graphSetting();
   
@@ -97,9 +136,10 @@ void setup() {
   altGraph.DrawAxis();
   oriGraph.DrawAxis();
   tmpGraph.DrawAxis();
-  locGraph.DrawAxis();
+  //locGraph.DrawAxis();
   drawRt(1205,245,230,470);
   drawLt(5,245,390,230);
+  image(webImg, 1205, 5);
   
   for (int i = 0;i < 35;i++) data[i] = 0;
   for (int i = 0;i < hTime;i++) sampleTime[i] = i-hTime+1;
@@ -127,19 +167,26 @@ void draw() {
       }
       
       if(writeGraph){
-        // gyro graph
-        float min,max;
-        /*for(int k = 0;k < gyroGraphValues[0].length - 1;k++){
-          gyroGraphValues[0][k] = gyroGraphValues[0][k+1];
-          //gyroTime[k] = gyroTime[k+1];
-          //if(gyroTime[k] == -1) gyroTime[k] = int(data[18]+data[17]*60+data[16]*3600)-gyroGraphValues[0].length+k;
-          if(gyroGraphValues[0][k] > max) max = gyroGraphValues[0][k];
+        // GPS convert to degrees
+        if(data[6] > 200){
+            float decimal_value = data[6]/100;
+            int degrees = int(decimal_value);
+            lat = degrees + (decimal_value - degrees)/0.6;
+            decimal_value = data[7]/100;
+            degrees = int(decimal_value);
+            lon = degrees + (decimal_value - degrees)/0.6;
         }
-        gyroGraphValues[0][gyroGraphValues[0].length-1] = data[22];
-        //gyroTime[gyroGraphValues[0].length-1] = int(data[18]+data[17]*60+data[16]*3600);
-        if(max > 0.5) gyroGraph.yMax = max;
-        else gyroGraph.yMax = 0.5;*/
+        // set base lat lon
+        if(blat == -1 || blon == -1){
+            float decimal_value = data[14]/100;
+            int degrees = int(decimal_value);
+            blat = degrees + (decimal_value - degrees)/0.6;
+            decimal_value = data[15]/100;
+            degrees = int(decimal_value);
+            blon = degrees + (decimal_value - degrees)/0.6;
+        }
         
+        float min,max;
         // gyro
         min = max = gyroGraphValues[0][0];
         for(int i = 0;i < 3;i++){
@@ -198,7 +245,7 @@ void draw() {
           if(altGraphValues[k] > max) max = altGraphValues[k];
           if(altGraphValues[k] < min) min = altGraphValues[k];
         }
-        altGraphValues[altGraphValues.length-1] = data[4];
+        altGraphValues[altGraphValues.length-1] = getAlt(data[3]) - getAlt(data[2]);
         if(altGraphValues[altGraphValues.length-1] > max) max = altGraphValues[altGraphValues.length-1];
         if(altGraphValues[altGraphValues.length-1] < min) min = altGraphValues[altGraphValues.length-1];
         if(max > altMax-1) altGraph.yMax = max+2;
@@ -235,35 +282,55 @@ void draw() {
         else tmpGraph.yMax = tmpMax;
         if(min < tmpMin+1) tmpGraph.yMin = min-2;
         else tmpGraph.yMin = tmpMin;
+        
+        // save data
+        if(saveData){
+          for(int i = 0;i < 35;i++){
+            dataLog.print(str(data[i]) + ",");
+          }
+          dataLog.println(str(data[35]));
+          dataLog.flush();
+        }
       }
-      
-      
     }
-    // draw graph
-    background(20);
-    gyroGraph.DrawAxis();
-    accGraph.DrawAxis();
-    vvGraph.DrawAxis();
-    altGraph.DrawAxis();
-    oriGraph.DrawAxis();
-    tmpGraph.DrawAxis();
-    locGraph.DrawAxis();
-    drawRt(1205,245,230,470);
-    drawLt(5,245,390,230);
-    gyroGraph.smoothLine(sampleTime, gyroGraphValues[0],graphColors[0]);
-    gyroGraph.smoothLine(sampleTime, gyroGraphValues[1],graphColors[1]);
-    gyroGraph.smoothLine(sampleTime, gyroGraphValues[2],graphColors[2]);
-    accGraph.smoothLine(sampleTime, accGraphValues[0],graphColors[0]);
-    accGraph.smoothLine(sampleTime, accGraphValues[1],graphColors[1]);
-    accGraph.smoothLine(sampleTime, accGraphValues[2],graphColors[2]);
-    oriGraph.smoothLine(sampleTime, oriGraphValues[0],graphColors[0]);
-    oriGraph.smoothLine(sampleTime, oriGraphValues[1],graphColors[1]);
-    oriGraph.smoothLine(sampleTime, oriGraphValues[2],graphColors[2]);
-    altGraph.smoothLine(sampleTime, altGraphValues,graphColors[1]);
-    vvGraph.smoothLine(sampleTime, vvGraphValues,graphColors[1]);
-    tmpGraph.smoothLine(sampleTime, tmpGraphValues,graphColors[1]);
   }
+  // draw graph
+  background(colors[0]);
+  gyroGraph.DrawAxis();
+  accGraph.DrawAxis();
+  vvGraph.DrawAxis();
+  altGraph.DrawAxis();
+  oriGraph.DrawAxis();
+  tmpGraph.DrawAxis();
+  //locGraph.DrawAxis();
+  drawRt(1205,245,230,470);
+  drawLt(5,245,390,230);
+  gyroGraph.smoothLine(sampleTime, gyroGraphValues[0],graphColors[0]);
+  gyroGraph.smoothLine(sampleTime, gyroGraphValues[1],graphColors[1]);
+  gyroGraph.smoothLine(sampleTime, gyroGraphValues[2],graphColors[2]);
+  accGraph.smoothLine(sampleTime, accGraphValues[0],graphColors[0]);
+  accGraph.smoothLine(sampleTime, accGraphValues[1],graphColors[1]);
+  accGraph.smoothLine(sampleTime, accGraphValues[2],graphColors[2]);
+  oriGraph.smoothLine(sampleTime, oriGraphValues[0],graphColors[0]);
+  oriGraph.smoothLine(sampleTime, oriGraphValues[1],graphColors[1]);
+  oriGraph.smoothLine(sampleTime, oriGraphValues[2],graphColors[2]);
+  altGraph.smoothLine(sampleTime, altGraphValues,graphColors[1]);
+  vvGraph.smoothLine(sampleTime, vvGraphValues,graphColors[1]);
+  tmpGraph.smoothLine(sampleTime, tmpGraphValues,graphColors[1]);
   
+  textAlign(CENTER); textSize(28);
+  fill(255); color(255); stroke(color(255)); strokeWeight(1.5);
+  text("Save Data" ,725,530);
+  text("Load Map" ,725,640);
+  // Map
+  if( loadMap && (lat != plat || lon != plon)){
+    String url = googleApi + "&markers=color:blue%7Clabel:H%7C" + str(blat) + "," + str(blon);
+    url += "&markers=color:red%7Csize:small%7C" + str(lat) + "," + str(lon);
+    plat = lat; plon = lon;
+    webImg = loadImage(url, "png");
+    println("Map Update");
+  }
+  image(webImg, 1205, 5);
 }
 
 void graphSetting(){
@@ -333,19 +400,24 @@ void graphSetting(){
   tmpGraph.yMax=tmpMax;
   tmpGraph.yMin=tmpMin;
   
-  locGraph.xLabel="meters";
-  locGraph.yLabel="meters";
-  locGraph.Title="Position";
-  locGraph.xDiv=5;
-  locGraph.yDiv=5;
-  locGraph.xMax=5;
-  locGraph.xMin=-5;
-  locGraph.yMax=5;
-  locGraph.yMin=-5;
+  //locGraph.xLabel="meters";
+  //locGraph.yLabel="meters";
+  //locGraph.Title="Position";
+  //locGraph.xDiv=5;
+  //locGraph.yDiv=5;
+  //locGraph.xMax=5;
+  //locGraph.xMin=-5;
+  //locGraph.yMax=5;
+  //locGraph.yMin=-5;
+}
+
+float getAlt(float cur){
+  float sea = 1019.66;
+  return 44330 * (1.0 - pow(cur / sea, 0.1903));
 }
 
 void drawRt(int x, int y, int w, int h){
-  fill(color(45)); color(255);stroke(color(255));strokeWeight(1.5);
+  fill(colors[1]); color(255);stroke(color(255));strokeWeight(1.5);
   rect(x,y,w,h,10);
   
   textAlign(CENTER); textSize(18);
@@ -362,48 +434,74 @@ void drawRt(int x, int y, int w, int h){
   text("NSAT:",X,Y+=S); text("HDOP:",X,Y+=S); text("fix:",X,Y+=S);
   text("fixq:",X,Y+=S); text("spd:",X,Y+=S); text("bLat:",X,Y+=S);
   text("bLon:",X,Y+=S); text("hour:",X,Y+=S); text("min:",X,Y+=S);
-  X = x+w/2+10; Y = y+24;
+  X = x+w/2+25; Y = y+24;
   text("sec:",X,Y+=S); text("AX:",X,Y+=S); text("AY:",X,Y+=S);
   text("AZ:",X,Y+=S); text("GX:",X,Y+=S); text("GY:",X,Y+=S);
   text("GZ:",X,Y+=S); text("MX:",X,Y+=S); text("MY:",X,Y+=S);
   text("MZ:",X,Y+=S); text("PIT:",X,Y+=S); text("ROL:",X,Y+=S);
   text("YAW:",X,Y+=S); text("ACC:",X,Y+=S); text("c5S:",X,Y+=S);
-  text("bat:",X,Y+=S); text("bH:",X,Y+=S); text("gH::",X,Y+=S);
+  text("bat:",X,Y+=S); text("bH:",X,Y+=S); text("gH:",X,Y+=S);
   X = x+60; Y = y+24;
   for(int i = 0;i < 18;i++){
     text(str(data[i]),X,Y+=S);
   }
-  X = x+w/2+50; Y = y+24;
+  X = x+w/2+60; Y = y+24;
   for(int i = 18;i < 36;i++){
     text(str(data[i]),X,Y+=S);
   }
 }
 
 void drawLt(int x, int y, int w, int h){
-  fill(color(45)); color(255);stroke(color(255));strokeWeight(1.5);
+  fill(colors[1]); color(255);stroke(color(255));strokeWeight(1.5);
   rect(x,y,w,h,10);
+  fill(255); color(255); stroke(color(255));strokeWeight(1.5);
+  textAlign(LEFT); textSize(24);
+  text("Time",x+60,y+36); text(nf(hour(),2,0)+":"+nf(minute(),2,0)+":"+nf(second(),2,0),x+215,y+36);
+  text("GPS Time",x+60,y+72); text(nf(int(data[16]),2,0)+":"+nf(int(data[17]),2,0)+":"+nf(int(data[18]),2,0),x+215,y+72);
   
   fill(255); color(255); stroke(color(255));strokeWeight(1.5);
   textAlign(LEFT); textSize(16);
   int X = x+20;
-  int Y = y+20;
-  int S = 34;
-  text("Temp:",X,Y+=S); text("Battery:",X,Y+=S);
-  text("Hour:",X,Y+=S); text("Minute:",X,Y+=S);
-  text("Second:",X,Y+=S);
-  X = x+w/2; Y = y+20;
-  text("Humidity:",X,Y+=S); text("Latitude:",X,Y+=S);
-  text("Longitude:",X,Y+=S); text("GPS Sats:",X,Y+=S);
+  int Y = y+80;
+  int S = 26;
+  text("Temp:",X,Y+=S);
+  text("Humidity:",X,Y+=S); 
+  text("Ref Pressure:",X,Y+=S);
   text("Pressure:",X,Y+=S);
+  text("Real Alt:",X,Y+=S);
+  X = x+w/2+20; Y = y+80;
+  text("Battery:",X,Y+=S);
+  text("Latitude:",X,Y+=S);
+  text("Longitude:",X,Y+=S); 
+  text("GPS Sats:",X,Y+=S);
+  text("GPS Alt:",X,Y+=S);
+  fill(180);
+  X = x+180; Y = y+80;
+  text("°C",X,Y+=S);
+  text("%",X,Y+=S);
+  text("Pa",X,Y+=S); 
+  text("Pa",X,Y+=S);
+  text("m",X,Y+=S);
+  X = x+w/2+160; Y = y+80;
+  text("V",X,Y+=S);
+  text("",X,Y+=S);
+  text("",X,Y+=S); 
+  text("",X,Y+=S);
+  text("m",X,Y+=S);
+  fill(255);
   
-  X = x+80; Y = y+20;
-  text(str(data[0]),X,Y+=S); text(str(data[33]),X,Y+=S);
-  text(str(data[16]),X,Y+=S); text(str(data[17]),X,Y+=S);
-  text(str(data[18]),X,Y+=S);
-  X = x+w/2+80; Y = y+20;
-  text(str(data[1]),X,Y+=S); text(str(data[6]),X,Y+=S);
-  text(str(data[7]),X,Y+=S); text(str(data[9]),X,Y+=S);
-  text(str(data[3]),X,Y+=S);
+  X = x+120; Y = y+80;
+  text(str(data[0]),X,Y+=S); 
+  text(str(data[1]),X,Y+=S);
+  text(str(int(data[2])),X,Y+=S); 
+  text(str(int(data[3])),X,Y+=S);
+  text(str(int(data[4])),X,Y+=S);
+  X = x+w/2+105; Y = y+80;
+  text(str(data[33]),X,Y+=S); 
+  text(nf(lat,0,4),X,Y+=S);
+  text(nf(lon,0,4),X,Y+=S); 
+  text(str(int(data[9])),X,Y+=S);
+  text(str(int(data[8])),X,Y+=S);
 }
 
 public void UP(int theValue){
@@ -414,12 +512,24 @@ public void DOWN(int theValue){
   if(serialPort != null) serialPort.write("d");
 }
 
-public void TEST(int theValue){
-  if(serialPort != null) serialPort.write("t");
+public void C1(int theValue){
+  if(serialPort != null) serialPort.write("c");
+}
+
+public void C2(int theValue){
+  if(serialPort != null) serialPort.write("d");
 }
 
 void controlEvent(ControlEvent theEvent) {
-  if (theEvent.getName() == "serial ports") {
+  if (theEvent.getName() == "save-data") {
+    if(theEvent.getValue() == 1.0) saveData = false;
+    else saveData = true;
+  }
+  else if (theEvent.getName() == "load-map") {
+    if(theEvent.getValue() == 1.0) loadMap = false;
+    else loadMap = true;
+  }
+  else if (theEvent.getName() == "serial ports") {
     if(serialPort != null){
       serialPort.stop();
       serialPort = null;
