@@ -34,13 +34,13 @@ DropdownList serialPortsList;
 final int BAUD_RATE = 115200;
 
 // graphs
-Graph gyroGraph = new Graph(65,45,310,150,color(200,200,200)); // x+65 y+45 -80 -80
-Graph accGraph = new Graph(465,45,310,150,color(200));
-Graph oriGraph = new Graph(865,45,310,150,color(200));
+Graph gyroGraph = new Graph(465,45,310,150,color(200,200,200)); // x+65 y+45 -80 -80
+Graph accGraph = new Graph(65,285,310,150,color(200));
+Graph oriGraph = new Graph(65,525,310,150,color(200));
 //Graph locGraph = new Graph(1265,45,150,150,color(200));
 Graph altGraph = new Graph(465,285,310,150,color(200));
-Graph vvGraph = new Graph(865,285,310,150,color(200));
-Graph tmpGraph = new Graph(65,525,310,150,color(200));
+//Graph vvGraph = new Graph(865,285,310,150,color(200));
+Graph tmpGraph = new Graph(465,525,310,150,color(200));
 
 float[][] gyroGraphValues = new float[3][hTime];
 float[][] accGraphValues = new float[3][hTime];
@@ -51,7 +51,7 @@ float[] tmpGraphValues = new float[hTime];
 float[] data = new float[40];
 float[] sampleTime = new float[hTime];
 float lat=-1, lon=-1, blat=-1, blon=-1, plat=-1, plon=-1;
-String googleApi = "https://maps.googleapis.com/maps/api/staticmap?&key=AIzaSyAz2LPPQrrUaGmC_yvAT72u4CfQSBtesKg&size=230x230";
+String googleApi = "https://maps.googleapis.com/maps/api/staticmap?&key=AIzaSyAz2LPPQrrUaGmC_yvAT72u4CfQSBtesKg&size=630x450";
 PImage webImg;
 PrintWriter dataLog;
 
@@ -73,55 +73,49 @@ void setup() {
   surface.setTitle("GroundSatation");
   size(1440, 810);
   pixelDensity(2); // enable for macos
-  //fullScreen();
+  fullScreen();
+  frameRate(24);
   // gui
   String[] portNames = Serial.list();
   cp5 = new ControlP5(this);
   background(colors[0]);
   ControlFont.RENDER_2X = true;
   dataLog = createWriter("LOG.csv");
-  // serial port
-  if(isMac) cp5.setFont(createFont("Arial",10));
-  else cp5.setFont(createFont("Arial",20));
-  serialPortsList = cp5.addDropdownList("serial ports").setPosition(820, 500).setWidth(360).setHeight(100);
-  serialPortsList.setBackgroundColor(color(20)).setColorBackground(colors[1]).setItemHeight(30).setBarHeight(30).setColorActive(color(255));
-  serialPortsList.getCaptionLabel().getStyle().setPadding(6,6,6,6);
-  for(int i = 0 ; i < portNames.length; i++) serialPortsList.addItem(portNames[i], i);
   
   // button
   cp5.addButton("UP")
-     .setPosition(420,500)
-     .setSize(100,90)
+     .setPosition(820,550)
+     .setSize(100,75)
      .setColorBackground(colors[1]);
   cp5.addButton("DOWN")
-     .setPosition(420,610)
-     .setSize(100,90)
+     .setPosition(820,645)
+     .setSize(100,75)
      .setColorBackground(colors[1]);
   cp5.addButton("C1")
-     .setPosition(540,500)
-     .setSize(100,90)
+     .setPosition(940,550)
+     .setSize(100,75)
      .setColorBackground(colors[1])
      .setLabel("C1");
   cp5.addButton("C2")
-     .setPosition(540,610)
-     .setSize(100,90)
+     .setPosition(940,645)
+     .setSize(100,75)
      .setColorBackground(colors[1])
      .setLabel("C2");
   textAlign(CENTER); textSize(28);
   fill(255); color(255); stroke(color(255)); strokeWeight(1.5);
-  text("Save Data" ,725,530);
+  //text("Save Data" ,1125,575);
   cp5.addToggle("save-data")
-     .setPosition(660,545)
-     .setSize(130,45)
+     .setPosition(1060,585)
+     .setSize(130,40)
      .setState(false)
      .setMode(ControlP5.SWITCH)
      .setLabel("")
      .setColorBackground(colors[1])
      .setColorActive(colors[2]);
-  text("Load Map" ,725,640);
+  //text("Load Map" ,1125,670);
   cp5.addToggle("load-map")
-     .setPosition(660,655)
-     .setSize(130,45)
+     .setPosition(1060,680)
+     .setSize(130,40)
      .setState(false)
      .setMode(ControlP5.SWITCH)
      .setLabel("")
@@ -132,14 +126,23 @@ void setup() {
   
   gyroGraph.DrawAxis();
   accGraph.DrawAxis();
-  vvGraph.DrawAxis();
+  //vvGraph.DrawAxis();
   altGraph.DrawAxis();
   oriGraph.DrawAxis();
   tmpGraph.DrawAxis();
   //locGraph.DrawAxis();
-  drawRt(1205,245,230,470);
-  drawLt(5,245,390,230);
-  image(webImg, 1205, 5);
+  drawRt(1205,485,230,470);
+  drawLt(5,5,390,230);
+  image(webImg, 805, 5);
+  
+  
+  // serial port
+  if(isMac) cp5.setFont(createFont("Arial",10));
+  else cp5.setFont(createFont("Arial",20));
+  serialPortsList = cp5.addDropdownList("serial ports").setPosition(820, 500).setWidth(360).setHeight(100);
+  serialPortsList.setBackgroundColor(color(20)).setColorBackground(colors[1]).setItemHeight(30).setBarHeight(30).setColorActive(color(255));
+  serialPortsList.getCaptionLabel().getStyle().setPadding(6,6,6,6);
+  for(int i = 0 ; i < portNames.length; i++) serialPortsList.addItem(portNames[i], i);
   
   for (int i = 0;i < 35;i++) data[i] = 0;
   for (int i = 0;i < hTime;i++) sampleTime[i] = i-hTime+1;
@@ -254,19 +257,19 @@ void draw() {
         else altGraph.yMin = altMin;
         
         // vv
-        min = max = vvGraphValues[13];
-        for(int k = 0;k < vvGraphValues.length - 1;k++){
-          vvGraphValues[k] = vvGraphValues[k+1];
-          if(vvGraphValues[k] > max) max = vvGraphValues[k];
-          if(vvGraphValues[k] < min) min = vvGraphValues[k];
-        }
-        vvGraphValues[vvGraphValues.length-1] = data[13];
-        if(vvGraphValues[vvGraphValues.length-1] > max) max = vvGraphValues[vvGraphValues.length-1];
-        if(vvGraphValues[vvGraphValues.length-1] < min) min = vvGraphValues[vvGraphValues.length-1];
-        if(max > vvMax-1) vvGraph.yMax = max+2;
-        else vvGraph.yMax = vvMax;
-        if(min < vvMin+1) vvGraph.yMin = min-2;
-        else vvGraph.yMin = vvMin;
+        //min = max = vvGraphValues[13];
+        //for(int k = 0;k < vvGraphValues.length - 1;k++){
+        //  vvGraphValues[k] = vvGraphValues[k+1];
+        //  if(vvGraphValues[k] > max) max = vvGraphValues[k];
+        //  if(vvGraphValues[k] < min) min = vvGraphValues[k];
+        //}
+        //vvGraphValues[vvGraphValues.length-1] = data[13];
+        //if(vvGraphValues[vvGraphValues.length-1] > max) max = vvGraphValues[vvGraphValues.length-1];
+        //if(vvGraphValues[vvGraphValues.length-1] < min) min = vvGraphValues[vvGraphValues.length-1];
+        //if(max > vvMax-1) vvGraph.yMax = max+2;
+        //else vvGraph.yMax = vvMax;
+        //if(min < vvMin+1) vvGraph.yMin = min-2;
+        //else vvGraph.yMin = vvMin;
         
         // tmp
         min = max = tmpGraphValues[0];
@@ -298,13 +301,13 @@ void draw() {
   background(colors[0]);
   gyroGraph.DrawAxis();
   accGraph.DrawAxis();
-  vvGraph.DrawAxis();
+  //vvGraph.DrawAxis();
   altGraph.DrawAxis();
   oriGraph.DrawAxis();
   tmpGraph.DrawAxis();
   //locGraph.DrawAxis();
-  drawRt(1205,245,230,470);
-  drawLt(5,245,390,230);
+  drawRt(1205,485,230,470);
+  drawLt(5,5,390,230);
   gyroGraph.smoothLine(sampleTime, gyroGraphValues[0],graphColors[0]);
   gyroGraph.smoothLine(sampleTime, gyroGraphValues[1],graphColors[1]);
   gyroGraph.smoothLine(sampleTime, gyroGraphValues[2],graphColors[2]);
@@ -315,22 +318,22 @@ void draw() {
   oriGraph.smoothLine(sampleTime, oriGraphValues[1],graphColors[1]);
   oriGraph.smoothLine(sampleTime, oriGraphValues[2],graphColors[2]);
   altGraph.smoothLine(sampleTime, altGraphValues,graphColors[1]);
-  vvGraph.smoothLine(sampleTime, vvGraphValues,graphColors[1]);
+  //vvGraph.smoothLine(sampleTime, vvGraphValues,graphColors[1]);
   tmpGraph.smoothLine(sampleTime, tmpGraphValues,graphColors[1]);
   
-  textAlign(CENTER); textSize(28);
+  textAlign(CENTER); textSize(24);
   fill(255); color(255); stroke(color(255)); strokeWeight(1.5);
-  text("Save Data" ,725,530);
-  text("Load Map" ,725,640);
+  text("Save Data" ,1125,575);
+  text("Load Map" ,1125,670);
   // Map
   if( loadMap && (lat != plat || lon != plon)){
-    String url = googleApi + "&markers=color:blue%7Clabel:H%7C" + str(blat) + "," + str(blon);
+    String url = googleApi;// + "&markers=color:blue%7Clabel:H%7C" + str(blat) + "," + str(blon);
     url += "&markers=color:red%7Csize:small%7C" + str(lat) + "," + str(lon);
     plat = lat; plon = lon;
     webImg = loadImage(url, "png");
     println("Map Update");
   }
-  image(webImg, 1205, 5);
+  image(webImg, 805, 5);
 }
 
 void graphSetting(){
@@ -360,15 +363,15 @@ void graphSetting(){
   accGraph.yMax=accMax;
   accGraph.yMin=accMin;
   
-  vvGraph.xLabel="Packet";
-  vvGraph.yLabel="m/s";
-  vvGraph.Title="Velocity";
-  vvGraph.xDiv=5;
-  vvGraph.yDiv=6;
-  vvGraph.xMax=0;
-  vvGraph.xMin=-hTime;
-  vvGraph.yMax=vvMax;
-  vvGraph.yMin=vvMin;
+  //vvGraph.xLabel="Packet";
+  //vvGraph.yLabel="m/s";
+  //vvGraph.Title="Velocity";
+  //vvGraph.xDiv=5;
+  //vvGraph.yDiv=6;
+  //vvGraph.xMax=0;
+  //vvGraph.xMin=-hTime;
+  //vvGraph.yMax=vvMax;
+  //vvGraph.yMin=vvMin;
   
   altGraph.xLabel="Packet";
   altGraph.yLabel="meters";
@@ -427,7 +430,7 @@ void drawRt(int x, int y, int w, int h){
   textAlign(LEFT); textSize(15);
   int X = x+10;
   int Y = y+24;
-  int S = 24;
+  int S = 21;
   text("TMP:",X,Y+=S); text("HUM:",X,Y+=S); text("bPRS:",X,Y+=S); 
   text("PRS:",X,Y+=S); text("ALT:",X,Y+=S); text("DIS:",X,Y+=S);
   text("LAT:",X,Y+=S); text("LON:",X,Y+=S); text("GALT:",X,Y+=S);
@@ -505,11 +508,11 @@ void drawLt(int x, int y, int w, int h){
 }
 
 public void UP(int theValue){
-  if(serialPort != null) serialPort.write("u");
+  if(serialPort != null) serialPort.write("d");
 }
 
 public void DOWN(int theValue){
-  if(serialPort != null) serialPort.write("d");
+  if(serialPort != null) serialPort.write("u");
 }
 
 public void C1(int theValue){
